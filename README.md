@@ -15,11 +15,11 @@ Benchmarks [`opendatalab/MinerU2.5-2509-1.2B`](https://huggingface.co/opendatala
 
 ```mermaid
 flowchart LR
-    PDF["PDF\n(base64)"]
-    Tests["tests.ipynb\n(serverless)"]
-    Queue["Delta Queue\n(pending → done)"]
-    GPU["GPU Cluster\ng5.2xlarge\nvLLM 0.7.3"]
-    Perf[("perf_results\ntable")]
+    PDF["PDF<br/>(base64)"]
+    Tests["tests.ipynb<br/>(serverless)"]
+    Queue["Delta Queue<br/>(pending → done)"]
+    GPU["GPU Cluster<br/>g5.2xlarge<br/>vLLM 0.7.3"]
+    Perf[("perf_results<br/>table")]
 
     Tests -- "1 enqueue" --> Queue
     Queue -- "2 trigger job" --> GPU
@@ -37,13 +37,13 @@ flowchart LR
 
 ```mermaid
 flowchart LR
-    PDF["PDF\n(base64)"]
-    Tests["tests.ipynb\n(serverless)"]
-    Perf[("perf_results\ntable")]
+    PDF["PDF<br/>(base64)"]
+    Tests["tests.ipynb<br/>(serverless)"]
+    Perf[("perf_results<br/>table")]
 
     subgraph GPU["GPU Cluster — g5.2xlarge (always-on)"]
-        Proxy["Driver Proxy\nport 7777"]
-        VLLM["vLLM HTTP Server\nOpenAI-compatible\n/v1/chat/completions"]
+        Proxy["Driver Proxy<br/>port 7777"]
+        VLLM["vLLM HTTP Server<br/>OpenAI-compatible<br/>/v1/chat/completions"]
         Proxy --> VLLM
     end
 
