@@ -1,11 +1,11 @@
-# MinerU2.5 on Databricks — 2 Deployment Patterns
+# Document Parsing with MinerU2.5 on Databricks — vLLM on Jobs Clusters
 
-Benchmarks [`opendatalab/MinerU2.5-2509-1.2B`](https://huggingface.co/opendatalab/MinerU2.5-2509-1.2B) across 2 vLLM serving patterns on Databricks, measuring cold-start overhead, per-page latency, and throughput.
+This tutorial walks you through serving [`opendatalab/MinerU2.5-2509-1.2B`](https://huggingface.co/opendatalab/MinerU2.5-2509-1.2B) — a vision-language model for document parsing — on Databricks using vLLM. You'll learn two deployment patterns that run on Jobs clusters:
 
-| Option | Pattern | Inference Engine |
-|--------|---------|-----------------|
-| **vLLM_Batch** | Triggered batch job | vLLM (pay-per-use, cold start) |
-| **vLLM_RT** | Continuous job + vLLM driver proxy | vLLM (always-hot, low latency) |
+| Pattern | How It Works | Best For |
+|---------|-------------|----------|
+| **vLLM_Batch** | Triggered batch job — cluster spins up on demand, processes a Delta queue, then shuts down | Scheduled / recurring workloads (pay-per-use) |
+| **vLLM_RT** | Continuous job with a vLLM HTTP server exposed via the driver proxy | Interactive use, demos, prototyping (always-hot) |
 
 ---
 
@@ -21,11 +21,11 @@ flowchart LR
     GPU["GPU Cluster<br/>g5.2xlarge<br/>vLLM 0.7.3"]
     Perf[("perf_results<br/>table")]
 
-    Tests -- "1 enqueue" --> Queue
-    Queue -- "2 trigger job" --> GPU
-    GPU -- "3 write markdown" --> Queue
-    Tests -- "4 poll results" --> Queue
-    Tests -- "5 record metrics" --> Perf
+    Tests -- "1-enqueue" --> Queue
+    Queue -- "2-trigger job" --> GPU
+    GPU -- "3-write markdown" --> Queue
+    Tests -- "4-poll results" --> Queue
+    Tests -- "5-record metrics" --> Perf
 ```
 
 1. `tests.ipynb` base64-encodes each PDF and inserts a row into the Delta queue table (`status=pending`).
@@ -47,9 +47,9 @@ flowchart LR
         Proxy --> VLLM
     end
 
-    Tests -- "1 HTTP POST" --> Proxy
-    VLLM -- "2 markdown response" --> Tests
-    Tests -- "3 record metrics" --> Perf
+    Tests -- "1-HTTP POST" --> Proxy
+    VLLM -- "2-markdown response" --> Tests
+    Tests -- "3-record metrics" --> Perf
 ```
 
 1. A continuous job keeps a GPU cluster running with vLLM serving on port 7777.
@@ -65,7 +65,7 @@ flowchart LR
 doc_parsing_mineru_vllm_databricks/
 ├── config.yaml                     # Central configuration (all notebooks read from this)
 ├── README.md                       # This file
-├── RESULTS.md                      # Benchmark results and recommendations
+├── RESULTS.md                      # Expected results and recommendations
 │
 ├── setup/
 │   ├── 00_download_model.ipynb     # Downloads MinerU2.5 (~3 GB) to Unity Catalog Volume
@@ -131,9 +131,9 @@ All notebooks read from this single file. No hardcoded values anywhere.
 
 ---
 
-## Quick Start
+## Tutorial
 
-### 1. Clone and configure
+### Step 1 — Clone and configure
 
 ```bash
 git clone https://github.com/manganganath/doc_parsing_mineru_vllm_databricks.git
@@ -142,37 +142,41 @@ cd doc_parsing_mineru_vllm_databricks
 
 Edit `config.yaml` — set `catalog` and `schema` to your Unity Catalog values.
 
-### 2. Upload to Databricks workspace
+### Step 2 — Upload to Databricks workspace
 
 ```bash
 databricks sync . /Workspace/Users/<your_email>/doc_parsing_mineru_databricks \
   --profile=<your_profile> --exclude .git --exclude .DS_Store --exclude __pycache__ --full
 ```
 
-### 3. Run setup notebooks (one-time)
+### Step 3 — Run setup notebooks (one-time)
 
 | Order | Notebook | Compute | What it does |
 |-------|----------|---------|--------------|
 | 1 | `setup/00_download_model` | GPU cluster | Downloads MinerU2.5 (~3 GB) to UC Volume |
 | 2 | `setup/01_prepare_test_cases` | Serverless / CPU | Generates TC1-TC4 test PDFs |
 
-### 4. Run vLLM_Batch
+### Step 4 — Option A: Serve with vLLM_Batch
 
-1. Create a triggered job pointing to `vllm_batch/notebook` on a GPU cluster.
+1. Create a **triggered job** pointing to `vllm_batch/notebook` on a GPU cluster.
 2. Run `vllm_batch/tests` (serverless) — pass the `job_id` as a widget parameter.
 3. The test notebook enqueues PDFs, triggers the job, polls for results, and writes metrics.
 
-### 5. Run vLLM_RT
+The cluster spins up only when triggered and shuts down after processing — you pay only for what you use.
 
-1. Create a **continuous** job pointing to `vllm_rt/notebook` on a GPU cluster.
+### Step 5 — Option B: Serve with vLLM_RT
+
+1. Create a **continuous job** pointing to `vllm_rt/notebook` on a GPU cluster.
 2. Wait for the cluster to start and vLLM to become ready.
 3. Run `vllm_rt/tests` (serverless) — pass the `cluster_id` as a widget parameter.
 4. The test notebook sends PDFs to the driver proxy and writes metrics.
 5. **Pause the job when done** to stop GPU billing.
 
-### 6. Compare results
+The model stays loaded in memory, giving you sub-second per-page latency with no cold start.
 
-Run `comparison/notebook` (serverless) to generate latency and throughput charts.
+### Step 6 — Compare results
+
+Run `comparison/notebook` (serverless) to generate latency and throughput charts across both patterns.
 
 ### Alternative: Automated pipeline
 
@@ -186,7 +190,7 @@ export DATABRICKS_USER_EMAIL="<your_email>"
 python3 -u scripts/orchestrate.py
 ```
 
-The orchestrator handles cleanup, upload, setup, parallel deployment of both options, testing, and comparison.
+The orchestrator handles cleanup, upload, setup, parallel deployment of both patterns, testing, and comparison.
 
 ---
 
@@ -210,19 +214,18 @@ The orchestrator handles cleanup, upload, setup, parallel deployment of both opt
 
 ---
 
-## Results
+## Expected Results
 
-See [RESULTS.md](RESULTS.md) for full benchmark data.
-
-**Quick summary** (benchmark run 2026-03-07, `g5.2xlarge`):
+On a `g5.2xlarge` (1x NVIDIA A10G), you can expect:
 
 | Metric | vLLM_Batch | vLLM_RT |
 |--------|------------|---------|
-| Cold start | ~845s | None |
+| Cold start | ~845s (cluster + model load) | None (always running) |
 | Per-page latency (warm) | ~1s | ~1s |
 | Throughput (warm) | ~60 pages/min | ~60 pages/min |
 | Idle cost | $0 (pay-per-use) | High (always-on GPU) |
-| Best for | Scheduled batch workloads | Demos, prototyping, interactive use |
+
+See [RESULTS.md](RESULTS.md) for detailed per-test-case numbers.
 
 ---
 
