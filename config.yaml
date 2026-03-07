@@ -1,0 +1,11 @@
+# mineru-databricks/config.yaml
+catalog:            <your_catalog>
+schema:             <your_schema>
+volume:             data
+model_subpath:      models
+hf_model_id:        opendatalab/MinerU2.5-2509-1.2B
+test_cases_subpath: test_cases
+queue_table:        mineru_queue
+perf_table:         mineru_perf_results
+vllm_port:          7777
+vllm_model_name:    mineru2.5
