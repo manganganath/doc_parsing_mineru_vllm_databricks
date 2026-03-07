@@ -13,27 +13,19 @@ Benchmarks [`opendatalab/MinerU2.5-2509-1.2B`](https://huggingface.co/opendatala
 
 ### vLLM_Batch (Triggered Batch Job)
 
-```
-                        Databricks
-┌────────┐   enqueue   ┌──────────────┐   poll    ┌──────────────┐
-│  PDF   │────────────▶│  Delta queue  │◀─────────│  tests.ipynb │
-│ (b64)  │             │  (pending)    │          │  (serverless)│
-└────────┘             └──────┬───────┘          └──────────────┘
-                              │ trigger job
-                              ▼
-                       ┌──────────────┐
-                       │  GPU cluster  │
-                       │  g5.2xlarge   │
-                       │              │
-                       │  vLLM 0.7.3  │
-                       │  (batch mode)│
-                       └──────┬───────┘
-                              │ write markdown
-                              ▼
-                       ┌──────────────┐
-                       │  Delta queue  │──▶ perf_results table
-                       │  (done)       │
-                       └──────────────┘
+```mermaid
+flowchart LR
+    PDF["PDF\n(base64)"]
+    Tests["tests.ipynb\n(serverless)"]
+    Queue["Delta Queue\n(pending → done)"]
+    GPU["GPU Cluster\ng5.2xlarge\nvLLM 0.7.3"]
+    Perf[("perf_results\ntable")]
+
+    Tests -- "1 enqueue" --> Queue
+    Queue -- "2 trigger job" --> GPU
+    GPU -- "3 write markdown" --> Queue
+    Tests -- "4 poll results" --> Queue
+    Tests -- "5 record metrics" --> Perf
 ```
 
 1. `tests.ipynb` base64-encodes each PDF and inserts a row into the Delta queue table (`status=pending`).
@@ -43,20 +35,21 @@ Benchmarks [`opendatalab/MinerU2.5-2509-1.2B`](https://huggingface.co/opendatala
 
 ### vLLM_RT (Continuous Job + Driver Proxy)
 
-```
-                        Databricks
-┌────────┐   HTTP POST  ┌──────────────────────────┐
-│  PDF   │─────────────▶│  Driver Proxy (port 7777) │
-│ (b64)  │              │                          │
-└────────┘              │  ┌────────────────────┐  │
-                        │  │  vLLM HTTP server   │  │
-     ┌──────────────┐   │  │  OpenAI-compatible  │  │
-     │  tests.ipynb │   │  │  /v1/chat/complete  │  │
-     │  (serverless)│◀──│  └────────────────────┘  │
-     └──────┬───────┘   │     GPU cluster           │
-            │           │     g5.2xlarge (always-on) │
-            ▼           └──────────────────────────┘
-     perf_results table
+```mermaid
+flowchart LR
+    PDF["PDF\n(base64)"]
+    Tests["tests.ipynb\n(serverless)"]
+    Perf[("perf_results\ntable")]
+
+    subgraph GPU["GPU Cluster — g5.2xlarge (always-on)"]
+        Proxy["Driver Proxy\nport 7777"]
+        VLLM["vLLM HTTP Server\nOpenAI-compatible\n/v1/chat/completions"]
+        Proxy --> VLLM
+    end
+
+    Tests -- "1 HTTP POST" --> Proxy
+    VLLM -- "2 markdown response" --> Tests
+    Tests -- "3 record metrics" --> Perf
 ```
 
 1. A continuous job keeps a GPU cluster running with vLLM serving on port 7777.
