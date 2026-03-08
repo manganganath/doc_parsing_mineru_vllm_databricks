@@ -7,3 +7,4 @@ dist/
 .databricks/
 mlflow.db
 .databricksignore
+scripts/

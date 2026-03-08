@@ -79,13 +79,8 @@ doc_parsing_mineru_vllm_databricks/
 │   ├── notebook.ipynb              # Continuous job: runs vLLM HTTP server on driver proxy
 │   └── tests.ipynb                 # Sends PDFs via HTTP to driver proxy, records metrics
 │
-├── comparison/
-│   └── notebook.ipynb              # Reads perf table, computes throughput, renders charts
-│
-└── scripts/
-    ├── orchestrate.py              # End-to-end pipeline: setup → deploy → test → compare
-    ├── run_vllm_batch.py           # Local runner for batch option (Databricks SDK + Connect)
-    └── run_vllm_rt.py              # Local runner for RT option (Databricks SDK + HTTP)
+└── comparison/
+    └── notebook.ipynb              # Reads perf table, computes throughput, renders charts
 ```
 
 ---
@@ -97,8 +92,6 @@ doc_parsing_mineru_vllm_databricks/
 | **Databricks workspace** | With Unity Catalog enabled |
 | **AWS GPU availability** | `g5.2xlarge` (1x NVIDIA A10G, 24 GB VRAM) |
 | **Databricks CLI** | Installed and configured with a profile (`databricks configure`) |
-| **Python** | 3.10+ (for local scripts) |
-| **pip packages** (local) | `databricks-sdk`, `pyyaml` — install with `pip install databricks-sdk pyyaml` |
 
 ---
 
@@ -121,39 +114,23 @@ All notebooks read from this single file. No hardcoded values anywhere.
 | `vllm_port` | `7777` | Port for the vLLM HTTP server (RT mode) |
 | `vllm_model_name` | `mineru2.5` | Model name exposed via the OpenAI-compatible API |
 
-### Environment Variables (for `scripts/orchestrate.py`)
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `DATABRICKS_CONFIG_PROFILE` | `DEFAULT` | Databricks CLI profile name |
-| `DATABRICKS_WORKSPACE_DIR` | `/Users/<your_email>/doc_parsing_mineru_databricks` | Target workspace directory |
-| `DATABRICKS_USER_EMAIL` | `<your_email>` | User email for single-user cluster ACLs |
-
 ---
 
 ## Tutorial
 
-### Step 1 — Clone and configure
+### Step 1 — Clone to your Databricks workspace
 
-```bash
-git clone https://github.com/manganganath/doc_parsing_mineru_vllm_databricks.git
-cd doc_parsing_mineru_vllm_databricks
-```
+Clone this repo into your Databricks workspace using Git Folders (Repos).
+
+### Step 2 — Configure
 
 Edit `config.yaml` — set `catalog` and `schema` to your Unity Catalog values.
-
-### Step 2 — Upload to Databricks workspace
-
-```bash
-databricks sync . /Workspace/Users/<your_email>/doc_parsing_mineru_databricks \
-  --profile=<your_profile> --exclude .git --exclude .DS_Store --exclude __pycache__ --full
-```
 
 ### Step 3 — Run setup notebooks (one-time)
 
 | Order | Notebook | Compute | What it does |
 |-------|----------|---------|--------------|
-| 1 | `setup/00_download_model` | GPU cluster | Downloads MinerU2.5 (~3 GB) to UC Volume |
+| 1 | `setup/00_download_model` | Serverless / CPU | Downloads MinerU2.5 (~3 GB) to UC Volume |
 | 2 | `setup/01_prepare_test_cases` | Serverless / CPU | Generates TC1-TC4 test PDFs |
 
 ### Step 4 — Option A: Serve with vLLM_Batch
@@ -178,33 +155,19 @@ The model stays loaded in memory, giving you sub-second per-page latency with no
 
 Run `comparison/notebook` (serverless) to generate latency and throughput charts across both patterns.
 
-### Alternative: Automated pipeline
-
-Run everything end-to-end with a single command:
-
-```bash
-export DATABRICKS_CONFIG_PROFILE=<your_profile>
-export DATABRICKS_WORKSPACE_DIR="/Users/<your_email>/doc_parsing_mineru_databricks"
-export DATABRICKS_USER_EMAIL="<your_email>"
-
-python3 -u scripts/orchestrate.py
-```
-
-The orchestrator handles cleanup, upload, setup, parallel deployment of both patterns, testing, and comparison.
-
 ---
 
 ## Cluster Requirements
 
 | Notebook | GPU? | Instance | Runtime | Notes |
 |----------|------|----------|---------|-------|
-| `setup/00_download_model` | No | Any CPU | 15.4 ML GPU | Downloads ~3 GB model |
+| `setup/00_download_model` | No | Any CPU | Serverless | Downloads ~3 GB model |
 | `setup/01_prepare_test_cases` | No | Any CPU | Serverless | Generates PDF test fixtures |
 | `vllm_batch/notebook` | **Yes** | `g5.2xlarge` | **15.4 ML GPU** | Runs vLLM batch inference |
-| `vllm_batch/tests` | No | Serverless | Serverless | Enqueues PDFs + polls Delta queue |
+| `vllm_batch/tests` | No | Any CPU | Serverless | Enqueues PDFs + polls Delta queue |
 | `vllm_rt/notebook` | **Yes** | `g5.2xlarge` | **15.4 ML GPU** | Continuous job; launches vLLM HTTP server |
-| `vllm_rt/tests` | No | Serverless | Serverless | HTTP requests to vLLM driver proxy |
-| `comparison/notebook` | No | Serverless | Serverless | Reads perf table, renders charts |
+| `vllm_rt/tests` | No | Any CPU | Serverless | HTTP requests to vLLM driver proxy |
+| `comparison/notebook` | No | Any CPU | Serverless | Reads perf table, renders charts |
 
 **GPU cluster spec** (all GPU notebooks):
 - **Instance**: `g5.2xlarge` (AWS) — 1x NVIDIA A10G, 24 GB VRAM, 32 GB RAM
