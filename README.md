@@ -77,7 +77,7 @@ doc_parsing_mineru_vllm_databricks/
 │   ├── notebook.ipynb              # GPU job: processes Delta queue rows with vLLM
 │   └── tests.ipynb                 # Enqueues PDFs, triggers job, polls results, records metrics
 │
-├── vllm_rt/
+├── vllm_real_time/
 │   ├── notebook.ipynb              # Continuous job: runs vLLM HTTP server on driver proxy
 │   └── tests.ipynb                 # Sends PDFs via HTTP to driver proxy, records metrics
 │
@@ -147,9 +147,9 @@ The cluster spins up only when triggered and shuts down after processing — you
 
 ### Step 5 — Option B: Serve with vLLM_RT
 
-1. Create a **continuous job** pointing to `vllm_rt/notebook` on a GPU cluster.
+1. Create a **continuous job** pointing to `vllm_real_time/notebook` on a GPU cluster.
 2. Wait for the cluster to start and vLLM to become ready.
-3. Run `vllm_rt/tests` (serverless) — pass the `cluster_id` as a widget parameter.
+3. Run `vllm_real_time/tests` (serverless) — pass the `cluster_id` as a widget parameter.
 4. The test notebook sends PDFs to the driver proxy and writes metrics.
 5. **Pause the job when done** to stop GPU billing.
 
@@ -169,8 +169,8 @@ Run `comparison/notebook` (serverless) to generate latency and throughput charts
 | `setup/01_prepare_test_cases` | No | Serverless | CPU | Generates PDF test fixtures |
 | `vllm_batch/notebook` | **Yes** | g5.2xlarge or equivalent | **15.4 ML GPU** | Runs vLLM batch inference |
 | `vllm_batch/tests` | No | Serverless | CPU | Enqueues PDFs + polls Delta queue |
-| `vllm_rt/notebook` | **Yes** | g5.2xlarge or equivalent | **15.4 ML GPU** | Continuous job; launches vLLM HTTP server |
-| `vllm_rt/tests` | No | Serverless | CPU | HTTP requests to vLLM driver proxy |
+| `vllm_real_time/notebook` | **Yes** | g5.2xlarge or equivalent | **15.4 ML GPU** | Continuous job; launches vLLM HTTP server |
+| `vllm_real_time/tests` | No | Serverless | CPU | HTTP requests to vLLM driver proxy |
 | `comparison/notebook` | No | Serverless | CPU | Reads perf table, renders charts |
 
 **GPU cluster spec** (all GPU notebooks):
