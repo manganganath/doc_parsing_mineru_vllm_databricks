@@ -18,7 +18,7 @@ flowchart LR
     PDF["PDF<br/>(base64)"]
     Tests["tests.ipynb<br/>(serverless)"]
     Queue["Delta Queue<br/>(pending → done)"]
-    GPU["GPU Cluster<br/>g5.2xlarge<br/>vLLM 0.7.3"]
+    GPU["GPU Cluster<br/>g5.2xlarge or equivalent<br/>vLLM 0.7.3"]
     Perf[("perf_results<br/>table")]
 
     Tests -- "1-enqueue" --> Queue
@@ -41,7 +41,7 @@ flowchart LR
     Tests["tests.ipynb<br/>(serverless)"]
     Perf[("perf_results<br/>table")]
 
-    subgraph GPU["GPU Cluster — g5.2xlarge (always-on)"]
+    subgraph GPU["GPU Cluster — g5.2xlarge or equivalent (always-on)"]
         Proxy["Driver Proxy<br/>port 7777"]
         VLLM["vLLM HTTP Server<br/>OpenAI-compatible<br/>/v1/chat/completions"]
         Proxy --> VLLM
@@ -90,7 +90,7 @@ doc_parsing_mineru_vllm_databricks/
 | Requirement | Details |
 |-------------|---------|
 | **Databricks workspace** | With Unity Catalog enabled |
-| **AWS GPU availability** | `g5.2xlarge` (1x NVIDIA A10G, 24 GB VRAM) |
+| **AWS GPU availability** | g5.2xlarge or equivalent (1x NVIDIA A10G, 24 GB VRAM) |
 | **Databricks CLI** | Installed and configured with a profile (`databricks configure`) |
 
 ---
@@ -161,16 +161,16 @@ Run `comparison/notebook` (serverless) to generate latency and throughput charts
 
 | Notebook | GPU? | Instance | Runtime | Notes |
 |----------|------|----------|---------|-------|
-| `setup/00_download_model` | No | Any CPU | Serverless | Downloads ~3 GB model |
-| `setup/01_prepare_test_cases` | No | Any CPU | Serverless | Generates PDF test fixtures |
-| `vllm_batch/notebook` | **Yes** | `g5.2xlarge` | **15.4 ML GPU** | Runs vLLM batch inference |
-| `vllm_batch/tests` | No | Any CPU | Serverless | Enqueues PDFs + polls Delta queue |
-| `vllm_rt/notebook` | **Yes** | `g5.2xlarge` | **15.4 ML GPU** | Continuous job; launches vLLM HTTP server |
-| `vllm_rt/tests` | No | Any CPU | Serverless | HTTP requests to vLLM driver proxy |
-| `comparison/notebook` | No | Any CPU | Serverless | Reads perf table, renders charts |
+| `setup/00_download_model` | No | Serverless | CPU | Downloads ~3 GB model |
+| `setup/01_prepare_test_cases` | No | Serverless | CPU | Generates PDF test fixtures |
+| `vllm_batch/notebook` | **Yes** | g5.2xlarge or equivalent | **15.4 ML GPU** | Runs vLLM batch inference |
+| `vllm_batch/tests` | No | Serverless | CPU | Enqueues PDFs + polls Delta queue |
+| `vllm_rt/notebook` | **Yes** | g5.2xlarge or equivalent | **15.4 ML GPU** | Continuous job; launches vLLM HTTP server |
+| `vllm_rt/tests` | No | Serverless | CPU | HTTP requests to vLLM driver proxy |
+| `comparison/notebook` | No | Serverless | CPU | Reads perf table, renders charts |
 
 **GPU cluster spec** (all GPU notebooks):
-- **Instance**: `g5.2xlarge` (AWS) — 1x NVIDIA A10G, 24 GB VRAM, 32 GB RAM
+- **Instance**: g5.2xlarge or equivalent (AWS) — 1x NVIDIA A10G, 24 GB VRAM, 32 GB RAM
 - **Runtime**: `15.4.x-gpu-ml-scala2.12` (Databricks ML GPU, Python 3.11)
 - **Workers**: 0 (single-node; `spark.master = local[*, 4]`)
 - **Cluster libraries**: None — all packages installed via `%pip install` inside notebooks
@@ -179,7 +179,7 @@ Run `comparison/notebook` (serverless) to generate latency and throughput charts
 
 ## Expected Results
 
-On a `g5.2xlarge` (1x NVIDIA A10G), you can expect:
+On a g5.2xlarge or equivalent (1x NVIDIA A10G, 24 GB VRAM), you can expect:
 
 | Metric | vLLM_Batch | vLLM_RT |
 |--------|------------|---------|

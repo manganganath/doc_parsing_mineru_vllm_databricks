@@ -2,7 +2,7 @@
 
 Benchmark run: **2026-03-07**
 
-Model: `opendatalab/MinerU2.5-2509-1.2B` on `g5.2xlarge` (1x NVIDIA A10G, 24 GB VRAM)
+Model: `opendatalab/MinerU2.5-2509-1.2B` on g5.2xlarge or equivalent (1x NVIDIA A10G, 24 GB VRAM)
 
 Runtime: Databricks ML Runtime 15.4 (`15.4.x-gpu-ml-scala2.12`), vLLM 0.7.3
 
