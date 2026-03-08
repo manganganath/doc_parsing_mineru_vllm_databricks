@@ -111,6 +111,8 @@ All notebooks read from this single file. No hardcoded values anywhere.
 | `test_cases_subpath` | `test_cases` | Subdirectory for generated test PDFs |
 | `queue_table` | `mineru_queue` | Delta table used as the batch job queue |
 | `perf_table` | `mineru_perf_results` | Delta table for benchmark results |
+| `batch_results_table` | `mineru_batch_results` | Delta table for parsed markdown from vLLM_Batch |
+| `rt_results_table` | `mineru_rt_results` | Delta table for parsed markdown from vLLM_RT |
 | `vllm_port` | `7777` | Port for the vLLM HTTP server (RT mode) |
 | `vllm_model_name` | `mineru2.5` | Model name exposed via the OpenAI-compatible API |
 
