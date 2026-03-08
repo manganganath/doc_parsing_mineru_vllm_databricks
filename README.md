@@ -5,7 +5,7 @@ This tutorial walks you through serving [`opendatalab/MinerU2.5-2509-1.2B`](http
 | Pattern | How It Works | Best For |
 |---------|-------------|----------|
 | **vLLM_Batch** | Triggered batch job — cluster spins up on demand, processes a Delta queue, then shuts down | Scheduled / recurring workloads (pay-per-use) |
-| **vLLM_RT** | Continuous job with a vLLM HTTP server exposed via the driver proxy | Interactive use, demos, prototyping (always-hot) |
+| **vLLM_Real_Time** | Continuous job with a vLLM HTTP server exposed via the driver proxy | Interactive use, demos, prototyping (always-hot) |
 
 ---
 
@@ -34,7 +34,7 @@ flowchart LR
 3. Each row is updated with the extracted markdown (`status=done`).
 4. `tests.ipynb` polls the queue, saves parsed markdown to the results table, and records latency in the perf table.
 
-### vLLM_RT (Continuous Job + Driver Proxy)
+### vLLM_Real_Time (Continuous Job + Driver Proxy)
 
 ```mermaid
 flowchart LR
@@ -114,7 +114,7 @@ All notebooks read from this single file. No hardcoded values anywhere.
 | `queue_table` | `mineru_queue` | Delta table used as the batch job queue |
 | `perf_table` | `mineru_perf_results` | Delta table for benchmark results |
 | `batch_results_table` | `mineru_batch_results` | Delta table for parsed markdown from vLLM_Batch |
-| `rt_results_table` | `mineru_rt_results` | Delta table for parsed markdown from vLLM_RT |
+| `rt_results_table` | `mineru_rt_results` | Delta table for parsed markdown from vLLM_Real_Time |
 | `vllm_port` | `7777` | Port for the vLLM HTTP server (RT mode) |
 | `vllm_model_name` | `mineru2.5` | Model name exposed via the OpenAI-compatible API |
 
@@ -145,7 +145,7 @@ Edit `config.yaml` — set `catalog` and `schema` to your Unity Catalog values.
 
 The cluster spins up only when triggered and shuts down after processing — you pay only for what you use.
 
-### Step 5 — Option B: Serve with vLLM_RT
+### Step 5 — Option B: Serve with vLLM_Real_Time
 
 1. Create a **continuous job** pointing to `vllm_real_time/notebook` on a GPU cluster.
 2. Wait for the cluster to start and vLLM to become ready.
@@ -185,7 +185,7 @@ Run `comparison/notebook` (serverless) to generate latency and throughput charts
 
 On a g5.2xlarge or equivalent (1x NVIDIA A10G, 24 GB VRAM), you can expect:
 
-| Metric | vLLM_Batch | vLLM_RT |
+| Metric | vLLM_Batch | vLLM_Real_Time |
 |--------|------------|---------|
 | Cold start | ~845s (cluster + model load) | None (always running) |
 | Per-page latency (warm) | ~1s | ~1s |
@@ -209,7 +209,7 @@ See [RESULTS.md](RESULTS.md) for detailed per-test-case numbers.
 - **Cold start dominates latency** (~845s for cluster + model load). Actual inference is ~1s per document.
 - Queue polling granularity is ~15 seconds.
 
-### vLLM_RT
+### vLLM_Real_Time
 
 - **GPU runs 24/7** even when idle. Pause the continuous job when not in use.
 - **CUDA JIT compilation** on first inference takes 120+ seconds. Mitigated by a warmup request in the test notebook.
