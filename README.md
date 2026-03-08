@@ -15,30 +15,31 @@ This tutorial walks you through serving [`opendatalab/MinerU2.5-2509-1.2B`](http
 
 ```mermaid
 flowchart LR
-    PDF["PDF<br/>(base64)"]
     Tests["tests.ipynb<br/>(serverless)"]
     Queue["Delta Queue<br/>(pending → done)"]
     GPU["GPU Cluster<br/>g5.2xlarge or equivalent<br/>vLLM 0.7.3"]
+    Results[("batch_results<br/>table")]
     Perf[("perf_results<br/>table")]
 
     Tests -- "1-enqueue" --> Queue
     Queue -- "2-trigger job" --> GPU
     GPU -- "3-write markdown" --> Queue
     Tests -- "4-poll results" --> Queue
-    Tests -- "5-record metrics" --> Perf
+    Tests -- "5-save parsed markdown" --> Results
+    Tests -- "6-record metrics" --> Perf
 ```
 
 1. `tests.ipynb` base64-encodes each PDF and inserts a row into the Delta queue table (`status=pending`).
 2. A triggered job spins up a GPU cluster, loads vLLM, and processes all pending rows.
 3. Each row is updated with the extracted markdown (`status=done`).
-4. `tests.ipynb` polls the queue and records latency in the perf table.
+4. `tests.ipynb` polls the queue, saves parsed markdown to the results table, and records latency in the perf table.
 
 ### vLLM_RT (Continuous Job + Driver Proxy)
 
 ```mermaid
 flowchart LR
-    PDF["PDF<br/>(base64)"]
     Tests["tests.ipynb<br/>(serverless)"]
+    Results[("rt_results<br/>table")]
     Perf[("perf_results<br/>table")]
 
     subgraph GPU["GPU Cluster — g5.2xlarge or equivalent (always-on)"]
@@ -49,13 +50,14 @@ flowchart LR
 
     Tests -- "1-HTTP POST" --> Proxy
     VLLM -- "2-markdown response" --> Tests
-    Tests -- "3-record metrics" --> Perf
+    Tests -- "3-save parsed markdown" --> Results
+    Tests -- "4-record metrics" --> Perf
 ```
 
 1. A continuous job keeps a GPU cluster running with vLLM serving on port 7777.
 2. `tests.ipynb` sends each PDF as a base64-encoded image via HTTP POST to the driver proxy.
 3. vLLM returns extracted markdown in the response body.
-4. Latency is recorded in the perf table. No cold start since the model is always loaded.
+4. Parsed markdown is saved to the results table. Latency is recorded in the perf table. No cold start since the model is always loaded.
 
 ---
 
